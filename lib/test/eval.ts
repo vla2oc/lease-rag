@@ -59,16 +59,24 @@ const inIndex = (q: Question) =>
     (c) => docLabel(c.file) === q.file && c.paragraphIds.includes(q.goldId),
   );
 
-const modes: Record<string, (q: string) => Promise<Hit[]> | Hit[]> = {
+const allModes: Record<string, (q: string) => Promise<Hit[]> | Hit[]> = {
   dense: (q) => search(q, K),
   bm25: (q) => bm25Search(q, K),
   hybrid: (q) => hybridSearch(q, K),
 };
 
+// dense and hybrid embed the query through OpenAI; without a key only the
+// network-free bm25 channel can run, so report that row instead of crashing.
+const hasKey = Boolean(process.env.OPENAI_API_KEY);
+const modes = hasKey ? allModes : { bm25: allModes.bm25 };
+
 const ranks: Record<string, number[]> = {};
 for (const mode of Object.keys(modes)) ranks[mode] = [];
 
 console.log(`\n${evalSet.length} questions, top-${K}\n`);
+if (!hasKey) {
+  console.log("OPENAI_API_KEY is not set: skipping dense and hybrid, bm25 only\n");
+}
 for (const q of evalSet) {
   console.log(`Q: ${q.question}`);
   console.log(

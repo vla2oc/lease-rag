@@ -5,6 +5,11 @@
 findings from Notion ("RAG findings — Recruo, 10.08") and fill in the
 checkboxes that can be answered straight from the data, without running OpenAI.
 
+> **Status (October 7, 2026):** dated snapshot. §0.3, §6.1, §7 and §9.1
+> describe `lib/test/eval.ts` as it was before commit `4cbf14b`; it now holds
+> six questions and computes hit@1 / hit@5 / MRR for all three modes (see
+> README → Eval).
+
 What "before/after" means: git has a single commit (`b3eb0d6`), a diff against
 the old version is impossible. The only record of how things used to be is
 `docs/CHANGES.md`. Everywhere below, a "was → became" comparison is marked

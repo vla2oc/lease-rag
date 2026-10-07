@@ -135,6 +135,9 @@ computed on each channel **before** fusion.
 - The Finding 3 questions are not yet in `eval.ts`; its 0.60 is from the
   original manual runs and is not reproducible with `npm run eval` until they
   are added.
+- Two of the six `eval.ts` questions (lease end date, Proportionate Share)
+  have their gold paragraphs in the same Lease Summary chunk of lease_427
+  (s1p3–s1p33), so they measure the same retrieval twice.
 - Facts that legitimately change across amendments were excluded on purpose.
   lease_652 alone has five values of Tenant's Proportionate Share
   (11.52% → 16.86% → 29.48% → 30.47% → 32.69%). "Current value" ≠ "first
@@ -229,6 +232,7 @@ leave a corrupted index. Run from the repository root.
 npm run typecheck
 npm run lint
 npm run eval         # hit@1 / hit@5 / MRR for all three modes, read-only
+                     # (bm25 row only when OPENAI_API_KEY is not set)
 ```
 
 ## Eval
@@ -240,9 +244,10 @@ to `chunk@k` than to `file@5` from the evaluation method above.
 
 The set is **different from the five questions behind Finding 3**. Those were
 built so that the only distinguisher is the party name, and both channels
-score 0.60 on them. The six questions below each contain a distinguishing
-term (`Holdover Rate`, `Suite 190`, `Proportionate Share`…), which is why BM25
-does so much better here. Current numbers, 6 questions over 2 leases:
+score 0.60 on them. The six questions in `eval.ts` each contain a
+distinguishing term (`Holdover Rate`, `Suite 190`, `Proportionate Share`…),
+which is why BM25 does so much better here. Numbers as of commit `4cbf14b`,
+6 questions over 2 leases:
 
 | Mode   | hit@1 | hit@5 | MRR  |
 | ------ | ----- | ----- | ---- |
@@ -251,9 +256,14 @@ does so much better here. Current numbers, 6 questions over 2 leases:
 | hybrid | 0.50  | 0.83  | 0.59 |
 
 Dense misses three questions whose answers hinge on defined terms (Holdover
-Rate, Permitted Alteration, Construction Allowance); RRF then pulls those
-misses into hybrid. The sample is small — treat the table as a baseline for
+Rate, Permitted Alteration, Construction Allowance); RRF carries that
+weakness into hybrid: Permitted Alteration stays a miss, the other two drop
+to ranks 3 and 5. The sample is small — treat the table as a baseline for
 comparing changes, not as a benchmark.
+
+The bm25 row runs offline. The dense and hybrid rows embed each question
+through OpenAI (6 calls per mode); without `OPENAI_API_KEY` the script prints
+the bm25 row only and says so.
 
 ## Deployment
 
