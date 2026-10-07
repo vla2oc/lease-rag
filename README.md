@@ -127,10 +127,14 @@ computed on each channel **before** fusion.
 
 ### Known limitations of the eval set
 
-- It is small (5 questions) and was drafted against two of the 29 leases.
-  Uniqueness of each fact across the full corpus is not guaranteed and should
-  be checked mechanically (`grep` for `forty-five (45)`, `$25,000.00`, etc.)
-  before adding questions.
+- Both sets are small — 5 questions behind Finding 3, 6 in
+  `lib/test/eval.ts` (see [Eval](#eval)) — and were drafted against two of the
+  29 leases. Uniqueness of each fact across the full corpus is not guaranteed
+  and should be checked mechanically (`grep` for `forty-five (45)`,
+  `$25,000.00`, etc.) before adding questions.
+- The Finding 3 questions are not yet in `eval.ts`; its 0.60 is from the
+  original manual runs and is not reproducible with `npm run eval` until they
+  are added.
 - Facts that legitimately change across amendments were excluded on purpose.
   lease_652 alone has five values of Tenant's Proportionate Share
   (11.52% → 16.86% → 29.48% → 30.47% → 32.69%). "Current value" ≠ "first
@@ -213,7 +217,7 @@ Order matters — vectors are matched to chunks by array index:
 
 ```bash
 npm run data:parse   # lib/data/pool/*.html → lib/data/embed/chunks.json
-npm run data:embed   # chunks.json → embeddings.json (overwrites 22 MB)
+npm run data:embed   # chunks.json → embeddings.json (overwrites 21 MB)
 ```
 
 Both scripts write atomically (temp file + rename), so an interruption won't
@@ -224,8 +228,32 @@ leave a corrupted index. Run from the repository root.
 ```bash
 npm run typecheck
 npm run lint
-npm run eval         # top-5 for a reference query in all three modes, read-only
+npm run eval         # hit@1 / hit@5 / MRR for all three modes, read-only
 ```
+
+## Eval
+
+`npm run eval` runs the questions in `lib/test/eval.ts` (each with a gold
+paragraph id) through all three modes and reports where the chunk containing
+the gold paragraph landed. This is a chunk-level hit: `hit@k` here is closer
+to `chunk@k` than to `file@5` from the evaluation method above.
+
+The set is **different from the five questions behind Finding 3**. Those were
+built so that the only distinguisher is the party name, and both channels
+score 0.60 on them. The six questions below each contain a distinguishing
+term (`Holdover Rate`, `Suite 190`, `Proportionate Share`…), which is why BM25
+does so much better here. Current numbers, 6 questions over 2 leases:
+
+| Mode   | hit@1 | hit@5 | MRR  |
+| ------ | ----- | ----- | ---- |
+| dense  | 0.33  | 0.50  | 0.38 |
+| bm25   | 0.50  | 1.00  | 0.68 |
+| hybrid | 0.50  | 0.83  | 0.59 |
+
+Dense misses three questions whose answers hinge on defined terms (Holdover
+Rate, Permitted Alteration, Construction Allowance); RRF then pulls those
+misses into hybrid. The sample is small — treat the table as a baseline for
+comparing changes, not as a benchmark.
 
 ## Deployment
 

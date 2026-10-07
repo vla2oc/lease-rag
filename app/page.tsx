@@ -3,9 +3,9 @@
 import { useState, type SubmitEvent } from "react";
 
 const MODES = [
-  { id: "dense", label: "Dense", hint: "по эмбеддингам, косинусная близость" },
-  { id: "bm25", label: "BM25", hint: "лексический, без обращения к сети" },
-  { id: "hybrid", label: "Hybrid", hint: "dense + BM25, объединение через RRF" },
+  { id: "dense", label: "Dense", hint: "embeddings, cosine similarity" },
+  { id: "bm25", label: "BM25", hint: "lexical, no network calls" },
+  { id: "hybrid", label: "Hybrid", hint: "dense + BM25, fused via RRF" },
 ] as const;
 
 type Mode = (typeof MODES)[number]["id"];
@@ -41,13 +41,13 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Поиск не удался");
+        setError(data.error ?? "Search failed");
         setResults(null);
         return;
       }
       setResults(data.results);
     } catch {
-      setError("Не удалось связаться с сервером");
+      setError("Could not reach the server");
       setResults(null);
     } finally {
       setLoading(false);
@@ -61,8 +61,8 @@ export default function Home() {
       <header className="mb-8">
         <h1 className="text-2xl font-semibold tracking-tight">Lease Search</h1>
         <p className="mt-1.5 text-sm text-neutral-500 dark:text-neutral-400">
-          Поиск по 29 договорам аренды. Возвращает исходные фрагменты — без
-          генерации ответа моделью.
+          Search over 29 lease agreements. Returns the original contract
+          fragments, with no LLM-generated answer.
         </p>
       </header>
 
@@ -72,8 +72,8 @@ export default function Home() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             maxLength={300}
-            placeholder="Например: notice period for early termination"
-            aria-label="Поисковый запрос"
+            placeholder="e.g. notice period for early termination"
+            aria-label="Search query"
             className="min-w-0 grow rounded-lg border border-neutral-300 bg-transparent px-3.5 py-2.5 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-900 dark:border-neutral-700 dark:focus:border-neutral-300"
           />
           <button
@@ -81,12 +81,12 @@ export default function Home() {
             disabled={loading || !query.trim()}
             className="shrink-0 rounded-lg bg-neutral-900 px-5 py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-40 dark:bg-neutral-100 dark:text-neutral-900"
           >
-            {loading ? "Ищу…" : "Найти"}
+            {loading ? "Searching…" : "Search"}
           </button>
         </div>
 
         <fieldset className="mt-3">
-          <legend className="sr-only">Режим поиска</legend>
+          <legend className="sr-only">Search mode</legend>
           <div className="inline-flex rounded-lg border border-neutral-300 p-0.5 dark:border-neutral-700">
             {MODES.map((m) => (
               <label
@@ -125,8 +125,8 @@ export default function Home() {
         <section className="mt-10">
           <h2 className="mb-4 text-xs font-medium tracking-wide text-neutral-400 uppercase">
             {results.length > 0
-              ? `${results.length} фрагментов · ${mode}`
-              : "Ничего не найдено"}
+              ? `${results.length} fragments · ${mode}`
+              : "Nothing found"}
           </h2>
 
           <ol className="space-y-3">

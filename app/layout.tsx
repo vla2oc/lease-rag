@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Lease Search",
-  description: "Гибридный поиск по договорам аренды: dense, BM25 и RRF",
+  description: "Hybrid search over lease agreements: dense, BM25 and RRF",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

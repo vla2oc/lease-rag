@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   const limit = rateLimit(clientKey(req));
   if (!limit.ok) {
     return Response.json(
-      { error: "Слишком много запросов, попробуйте позже" },
+      { error: "Too many requests, try again later" },
       { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
     );
   }
@@ -33,27 +33,27 @@ export async function POST(req: Request) {
   try {
     body = await req.json();
   } catch {
-    return bad("Тело запроса должно быть корректным JSON");
+    return bad("Request body must be valid JSON");
   }
 
   if (typeof body !== "object" || body === null) {
-    return bad("Тело запроса должно быть объектом");
+    return bad("Request body must be an object");
   }
 
   const { query, mode = "hybrid", k = 5 } = body as Record<string, unknown>;
 
-  if (typeof query !== "string") return bad("Поле query должно быть строкой");
+  if (typeof query !== "string") return bad("Field query must be a string");
 
   const trimmed = query.trim();
-  if (!trimmed) return bad("Поле query не должно быть пустым");
+  if (!trimmed) return bad("Field query must not be empty");
   if (trimmed.length > MAX_QUERY_LENGTH) {
-    return bad(`Запрос длиннее ${MAX_QUERY_LENGTH} символов`);
+    return bad(`Query is longer than ${MAX_QUERY_LENGTH} characters`);
   }
 
-  if (!isMode(mode)) return bad(`Поле mode должно быть одним из: ${MODES}`);
+  if (!isMode(mode)) return bad(`Field mode must be one of: ${MODES}`);
 
   if (typeof k !== "number" || !Number.isInteger(k) || k < 1 || k > MAX_K) {
-    return bad(`Поле k должно быть целым числом от 1 до ${MAX_K}`);
+    return bad(`Field k must be an integer from 1 to ${MAX_K}`);
   }
 
   try {
@@ -75,6 +75,6 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     console.error("[api/search]", error);
-    return bad("Поиск не удался", 500);
+    return bad("Search failed", 500);
   }
 }
