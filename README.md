@@ -109,6 +109,61 @@ arithmetic, not relevance: `1/(60+1) × 2 ≈ 0.0328` for a result present in
 both lists, `≈ 0.0164` for one list. Any score-spread diagnostic has to be
 computed on each channel **before** fusion.
 
+### 6. hit@5 = 1.0, and the question still cannot be answered
+
+Question: *What is the monthly rent in month 20 of the Zomedica lease?*
+Gold: s1p27, the rent-schedule row `(2) Months 15-26 $19.72 $12,965.57
+$155,586.86`. BM25 puts the chunk holding it **first** (lease_427
+s1p3–s1p33, score 15.96 against 10.35 for the runner-up). By any retrieval
+metric this is a clean hit.
+
+The chunk cannot answer the question. `parse.ts` drops every paragraph
+shorter than `MIN_PARAGRAPH_CHARS = 40`. The table header
+`Term $/SQ.FT Monthly Annually` is **29** characters, the first row
+`(1) Months 0-2 $0.00 $0.00 $0.00` is 32, `TOTAL BASE RENT $801,972.57` is
+27. All three are gone — `grep` over `chunks.json` finds 0 of each. What is
+left in the chunk:
+
+```
+…monthly installments as follows: $801,972.57
+(1) Months 3-14 $19.15 $12,587.93 $151,055.20
+(2) Months 15-26 $19.72 $12,965.57 $155,586.86
+```
+
+Three numbers per row and no column names. Nothing says which one is monthly,
+and a model reading this will plausibly return the annual figure. The
+retrieval metric says "all good" and lies: the failure is in parsing, one
+layer below anything `hit@k` can see.
+
+The filter is deliberate — across the pool it removes 6,957 of 16,185
+paragraphs (43%), mostly single tokens, page numbers and running headers.
+The same line of code that cleans the corpus destroys the table headers.
+Length is the wrong criterion; content is: drop lines that are digits and
+punctuation only, and glue a short line that precedes a table to the row
+after it.
+
+### 7. The Lease Summary swallows the eval set
+
+Five of six candidate gold paragraphs for lease_427 sit in one chunk:
+
+| Question                      | Gold  | Chunk              |
+| ----------------------------- | ----- | ------------------ |
+| When does the lease end?      | s1p21 | #0 (s1p3–s1p33)    |
+| Who is the landlord?          | s1p5  | #0                 |
+| How many square feet?         | s1p16 | #0                 |
+| Monthly rent in month 20?     | s1p27 | #0                 |
+| Tenant's Proportionate Share  | s1p33 | #0                 |
+| Late payment penalty          | s1p57 | #4 (s1p55–s1p60)   |
+
+The Lease Summary fits entirely into the contract's first chunk, and that
+chunk is also one of the two places where the party name occurs at all
+(Finding 2). Any question that says "Zomedica" or "Wickfield" is led straight
+to chunk #0 by BM25, so an eval set drafted from the summary scores close to
+100% at `hit@5` and distinguishes nothing. Two of the six questions in
+`eval.ts` (s1p21, s1p33) are exactly this case. Questions have to come from
+the body of the contract — s1p54, s1p91, s1p159 each live in a different
+chunk — and `hit@1` / MRR separate retrievers where `hit@5` does not.
+
 ---
 
 ## Evaluation method
@@ -118,7 +173,8 @@ computed on each channel **before** fusion.
   `file@5` points at document discrimination — names, lexical signal,
   metadata. High `file@5` with low `chunk@1` points at chunking and reranking.
   A single `hit@5` hides which layer is failing: the verbatim run above would
-  have scored ✅.
+  have scored ✅, and the rent question in Finding 6 scores a clean hit with
+  nothing in the chunk to answer from.
 - **Top-5 score spread** is logged per channel as a resolution indicator.
 - **Cross-document contamination** — the share of queries whose top 5 mixes
   chunks from different contracts — is tracked as a proxy for generation risk.
@@ -137,7 +193,11 @@ computed on each channel **before** fusion.
   are added.
 - Two of the six `eval.ts` questions (lease end date, Proportionate Share)
   have their gold paragraphs in the same Lease Summary chunk of lease_427
-  (s1p3–s1p33), so they measure the same retrieval twice.
+  (s1p3–s1p33), so they measure the same retrieval twice (Finding 7).
+- Chunk-level `hit@k` cannot see paragraphs the parser dropped. s1p23 and
+  s1p31 of lease_427 are not in the index at all (Finding 6); `eval.ts`
+  flags a gold id that is missing from the index, but not a gold id whose
+  context was removed around it.
 - Facts that legitimately change across amendments were excluded on purpose.
   lease_652 alone has five values of Tenant's Proportionate Share
   (11.52% → 16.86% → 29.48% → 30.47% → 32.69%). "Current value" ≠ "first
@@ -169,9 +229,10 @@ contract, which should move questions 1 and 3 and make the hybrid channel
 earn its place. Success criteria: `Zomedica` returns ~100 lease_427 chunks
 instead of 2; `file@5` rises; top-5 spread on the dense channel widens.
 
-After that, in order: token-based chunking with overlap (removes hubs),
-metadata pre-filter when a party is named, cross-encoder reranking on the
-top 20.
+After that, in order: a content-based paragraph filter instead of the
+40-character cut, with table headers glued to their first row (Finding 6);
+token-based chunking with overlap (removes hubs); metadata pre-filter when a
+party is named; cross-encoder reranking on the top 20.
 
 ---
 
