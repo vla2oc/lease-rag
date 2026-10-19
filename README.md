@@ -1,4 +1,5 @@
 # Lease Search — a retrieval experiment on a homogeneous legal corpus
+**Demo:** video walkthrough on https://my-portfolio-one-mauve-82.vercel.app/work/lease-rag. Runs locally (see Running).
 
 29 commercial lease agreements, 1299 chunks, three retrieval modes over the
 same index: dense, BM25, and their fusion via RRF.
